@@ -26,3 +26,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Node / Next.js
+node_modules/
+.next/
+tsconfig.tsbuildinfo
