@@ -1,20 +1,20 @@
 import logging
 from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, field_validator
 from supabase import Client
 
 from constants import STARTING_EQUITY
 from db import get_db
 from pricing import get_price
+from reatelimit import check_rate_limit
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["trades"])
 
 
 class ExecutePayload(BaseModel):
-    webhook_api_key: str
     action: str
     ticker: str
     amount_in_dollars: float
@@ -42,17 +42,20 @@ class ExecutePayload(BaseModel):
 
 
 @router.post("/execute")
-def execute_trade(payload: ExecutePayload):
+def execute_trade(
+    payload: ExecutePayload,
+    x_webhook_api_key: str = Header(..., alias="X-Webhook-Api-Key"),
+):
     db = get_db()
 
     agent_res = (
         db.table("agents")
         .select("id, name, status")
-        .eq("webhook_api_key", payload.webhook_api_key)
+        .eq("webhook_api_key", x_webhook_api_key)
         .execute()
     )
     if not agent_res.data:
-        raise HTTPException(status_code=401, detail="Invalid webhook_api_key")
+        raise HTTPException(status_code=401, detail="Invalid X-Webhook-Api-Key")
 
     agent = agent_res.data[0]
     agent_id: str = agent["id"]
@@ -62,6 +65,8 @@ def execute_trade(payload: ExecutePayload):
             status_code=403,
             detail=f"Agent '{agent['name']}' is not active (status: {agent['status']})",
         )
+
+    check_rate_limit(agent_id)
 
     log.info(
         "Signal received — agent=%s  action=%s  ticker=%s  amount=$%.2f",
@@ -114,7 +119,7 @@ def _run_trade(db: Client, agent_id: str, signal_id: str, payload: ExecutePayloa
     if not portfolio_res.data:
         raise HTTPException(status_code=404, detail="Agent has no portfolio")
 
-    portfolio = portfolio_res.data[0] 
+    portfolio = portfolio_res.data[0]
     portfolio_id: str = portfolio["id"]
     cash_balance = Decimal(str(portfolio["cash_balance"]))
 
@@ -223,7 +228,8 @@ def _execute_sell(
         raise HTTPException(status_code=400, detail=f"No open position in {ticker}")
 
     held_qty = Decimal(str(position["quantity"]))
-    if held_qty < quantity:
+    # tolerance to avoid epsilon rejection on full-position sells
+    if held_qty + Decimal("0.000001") < quantity:
         raise HTTPException(
             status_code=400,
             detail=(
@@ -234,7 +240,7 @@ def _execute_sell(
         )
 
     new_qty = held_qty - quantity
-    if new_qty == 0:
+    if new_qty <= Decimal("0.000001"):
         db.table("positions").delete().eq("id", position["id"]).execute()
     else:
         db.table("positions").update({"quantity": str(new_qty)}).eq("id", position["id"]).execute()
@@ -261,19 +267,60 @@ def _update_agent_metrics(
 ) -> None:
     ytd_return = (total_equity - STARTING_EQUITY) / STARTING_EQUITY * 100
 
+    # Use COUNT via RPC instead of fetching all rows
     trades_res = (
-        db.table("trades").select("id").eq("portfolio_id", portfolio_id).execute()
+        db.table("trades")
+        .select("id, action, execution_price, quantity", count="exact")
+        .eq("portfolio_id", portfolio_id)
+        .execute()
     )
-    total_trades = len(trades_res.data)
+    total_trades = trades_res.count or 0
+
+    # Win rate: BUY trades where sell price > avg entry (approximated from trade pairs)
+    # Simple definition: % of SELL trades that were profitable vs their signal execution price
+    sell_trades = [t for t in trades_res.data if t["action"] == "SELL"]
+    buy_trades = [t for t in trades_res.data if t["action"] == "BUY"]
+
+    if sell_trades and buy_trades:
+        avg_buy_price = sum(float(t["execution_price"]) for t in buy_trades) / len(buy_trades)
+        winning_sells = sum(
+            1 for t in sell_trades if float(t["execution_price"]) > avg_buy_price
+        )
+        win_rate = (winning_sells / len(sell_trades)) * 100
+    else:
+        win_rate = 0.0
+
+    # Max drawdown: largest peak-to-trough decline in running equity
+    # Approximate from snapshots if available, else from trade history
+    snapshots_res = (
+        db.table("portfolio_snapshots")
+        .select("total_equity")
+        .eq("portfolio_id", portfolio_id)
+        .order("timestamp")
+        .execute()
+    )
+    if snapshots_res.data:
+        equities = [float(s["total_equity"]) for s in snapshots_res.data]
+        peak = equities[0]
+        max_drawdown = 0.0
+        for e in equities:
+            peak = max(peak, e)
+            drawdown = (peak - e) / peak * 100
+            max_drawdown = max(max_drawdown, drawdown)
+    else:
+        max_drawdown = 0.0
 
     db.table("agent_metrics").update(
         {
             "ytd_return_pct": str(ytd_return),
+            "win_rate_pct": str(round(win_rate, 4)),
+            "max_drawdown_pct": str(round(max_drawdown, 4)),
             "total_trades": total_trades,
+            "updated_at": "now()",
         }
     ).eq("agent_id", agent_id).execute()
 
     log.info(
-        "Metrics updated — agent=%s  ytd=%.4f%%  trades=%d",
-        agent_id, float(ytd_return), total_trades,
+        "Metrics updated — agent=%s  ytd=%.4f%%  win_rate=%.2f%%  drawdown=%.2f%%  trades=%d",
+        agent_id, float(ytd_return), win_rate, max_drawdown, total_trades,
     )

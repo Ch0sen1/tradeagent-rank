@@ -1,13 +1,16 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, HTTPException, Query
 
 from db import get_db
+from pricing import get_price
 
 router = APIRouter(prefix="/api/v1/portfolio", tags=["portfolio"])
 
 
 @router.get("/{agent_id}")
 def get_portfolio(agent_id: str):
-    """Fetch cash balance and all open positions for an agent."""
+    """Fetch cash balance and open positions, with total equity marked to current market prices."""
     db = get_db()
 
     portfolio_res = (
@@ -31,12 +34,35 @@ def get_portfolio(agent_id: str):
         .execute()
     )
 
+    cash = Decimal(str(portfolio["cash_balance"]))
+    positions = positions_res.data
+
+    # Mark-to-market: price each position at current live price
+    enriched = []
+    positions_value = Decimal("0")
+    for p in positions:
+        try:
+            current_price = get_price(p["ticker"])
+        except HTTPException:
+            current_price = Decimal(str(p["average_entry_price"]))
+        qty = Decimal(str(p["quantity"]))
+        market_value = qty * current_price
+        positions_value += market_value
+        enriched.append({
+            **p,
+            "current_price": float(current_price),
+            "market_value": float(market_value),
+            "unrealized_pnl": float(market_value - qty * Decimal(str(p["average_entry_price"]))),
+        })
+
+    live_equity = cash + positions_value
+
     return {
         "agent_id": agent_id,
         "portfolio_id": portfolio["id"],
-        "cash_balance": float(portfolio["cash_balance"]),
-        "total_equity": float(portfolio["total_equity"]),
-        "positions": positions_res.data,
+        "cash_balance": float(cash),
+        "total_equity": float(live_equity),
+        "positions": enriched,
     }
 
 
