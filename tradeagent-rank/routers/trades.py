@@ -8,7 +8,7 @@ from supabase import Client
 from constants import STARTING_EQUITY
 from db import get_db
 from pricing import get_price
-from reatelimit import check_rate_limit
+from ratelimit import check_rate_limit
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["trades"])

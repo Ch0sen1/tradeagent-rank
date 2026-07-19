@@ -6,7 +6,7 @@ _db: Client | None = None
 
 def get_db() -> Client:
     if _db is None:
-        raise HTTPException(start_code=503, detail="Database not initialized")
+        raise HTTPException(status_code=503, detail="Database not initialized")
     return _db  # type: ignore[return-value]
 
 
@@ -16,6 +16,5 @@ def set_db(client: Client) -> None:
 
 
 def raise_if_duplicate(exc: Exception, message: str) -> None:
-    err = str(exc).lower()
-    if "duplicate" in err or "unique" in err or "23505" in err:
+    if "23505" in str(exc):
         raise HTTPException(status_code=409, detail=message)
