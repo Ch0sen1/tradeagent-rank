@@ -1,67 +1,99 @@
 @import "tailwindcss";
 
+/* ─── Light mode (default) — warm cream, claude.ai-inspired ─────────────── */
 @theme {
-  --color-tr-bg: #0a0c0f;
-  --color-tr-surface: #141719;
-  --color-tr-hover: #1c1f23;
-  --color-tr-border: #1e2228;
-  --color-tr-primary: #f8f9fa;
-  --color-tr-secondary: #94a0ac;
-  --color-tr-muted: #64748b;
-  --color-tr-green: #00e638;
-  --color-tr-red: #ff4444;
-  --color-tr-gold: #f5a623;
+  --color-tr-bg:        #F9F7F4;
+  --color-tr-surface:   #FFFFFF;
+  --color-tr-hover:     #F2EEE8;
+  --color-tr-border:    #E5E0D8;
+  --color-tr-primary:   #111111;
+  --color-tr-secondary: #5C5550;
+  --color-tr-muted:     #9C9590;
+  --color-tr-green:     #16A34A;
+  --color-tr-red:       #DC2626;
+  --color-tr-gold:      #C27B00;
   --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-jetbrains-mono);
 }
 
+/* ─── Dark mode — original black ────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-tr-bg:        #0a0c0f;
+    --color-tr-surface:   #141719;
+    --color-tr-hover:     #1c1f23;
+    --color-tr-border:    #1e2228;
+    --color-tr-primary:   #f8f9fa;
+    --color-tr-secondary: #94a0ac;
+    --color-tr-muted:     #64748b;
+    --color-tr-green:     #00e638;
+    --color-tr-red:       #ff4444;
+    --color-tr-gold:      #f5a623;
+  }
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #1e2228 transparent;
+  scrollbar-color: #E5E0D8 transparent;
 }
 
-*::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+@media (prefers-color-scheme: dark) {
+  * { scrollbar-color: #1e2228 transparent; }
 }
 
-*::-webkit-scrollbar-track {
-  background: transparent;
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #E5E0D8; border-radius: 2px; }
+*::-webkit-scrollbar-thumb:hover { background: #D0C9BF; }
+
+@media (prefers-color-scheme: dark) {
+  *::-webkit-scrollbar-thumb { background: #1e2228; }
+  *::-webkit-scrollbar-thumb:hover { background: #2a3040; }
 }
 
-*::-webkit-scrollbar-thumb {
-  background: #1e2228;
-  border-radius: 2px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: #2a3040;
-}
-
+/* ─── Focus ──────────────────────────────────────────────────────────────── */
 *:focus-visible {
-  outline: 2px solid #00e638;
+  outline: 2px solid #16A34A;
   outline-offset: 2px;
   border-radius: 2px;
 }
 
+@media (prefers-color-scheme: dark) {
+  *:focus-visible { outline-color: #00e638; }
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
 body {
-  background-color: #0a0c0f;
-  color: #f8f9fa;
+  background-color: #F9F7F4;
+  color: #111111;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #0a0c0f;
+    color: #f8f9fa;
+  }
 }
 
 h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.025em;
 }
 
+/* ─── Skeleton ───────────────────────────────────────────────────────────── */
 @keyframes pulse-bg {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
 
 .skeleton {
-  background: #141719;
+  background: #EDE9E3;
   animation: pulse-bg 1.5s ease-in-out infinite;
   border-radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .skeleton { background: #141719; }
 }

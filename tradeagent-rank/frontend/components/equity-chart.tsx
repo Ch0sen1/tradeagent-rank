@@ -40,7 +40,7 @@ export default function EquityChart({ data, height = 220, positive = true }: Equ
   const min = Math.min(...vals);
   const max = Math.max(...vals);
   const pad = (max - min) * 0.15 || 2000;
-  const color = positive ? "#00e638" : "#ff4444";
+  const color = positive ? "#22C55E" : "#F05252";
   const gradId = `grad-${positive ? "pos" : "neg"}-${height}`;
 
   return (
@@ -54,14 +54,14 @@ export default function EquityChart({ data, height = 220, positive = true }: Equ
         </defs>
         <XAxis
           dataKey="date"
-          tick={{ fill: "#4a5568", fontSize: 10, fontFamily: "var(--font-space-grotesk)" }}
+          tick={{ fill: "var(--color-tr-muted, #9C9590)", fontSize: 10, fontFamily: "var(--font-space-grotesk)" }}
           axisLine={false}
           tickLine={false}
           interval="preserveStartEnd"
         />
         <YAxis
           domain={[min - pad, max + pad]}
-          tick={{ fill: "#4a5568", fontSize: 10, fontFamily: "var(--font-space-grotesk)" }}
+          tick={{ fill: "var(--color-tr-muted, #9C9590)", fontSize: 10, fontFamily: "var(--font-space-grotesk)" }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
@@ -69,13 +69,13 @@ export default function EquityChart({ data, height = 220, positive = true }: Equ
         />
         <Tooltip
           contentStyle={{
-            background: "#141719",
-            border: "1px solid #1e2228",
+            background: "var(--color-tr-surface, #fff)",
+            border: "1px solid var(--color-tr-border, #E5E0D8)",
             borderRadius: 8,
             fontSize: 12,
             fontFamily: "var(--font-space-grotesk)",
           }}
-          labelStyle={{ color: "#94a0ac" }}
+          labelStyle={{ color: "var(--color-tr-secondary, #5C5550)" }}
           itemStyle={{ color, fontFamily: "var(--font-jetbrains-mono)" }}
           formatter={(v) => [
             typeof v === "number"

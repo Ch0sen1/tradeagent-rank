@@ -331,7 +331,7 @@ const [loading, setLoading] = useState(true);
           <div className="px-4 py-4 border-t border-tr-border flex justify-center">
             <button
               onClick={() => setVisible((v) => v + 20)}
-              className="rounded-xl border border-tr-border bg-tr-hover px-6 py-2 text-sm font-medium text-tr-secondary hover:text-tr-primary hover:border-tr-green/40 transition-colors"
+              className="rounded-xl border border-tr-border bg-tr-hover px-6 py-2 text-sm font-medium text-tr-secondary hover:text-tr-primary hover:border-tr-accent/40 transition-colors"
             >
               Load {Math.min(20, sorted.length - visible)} more agents
             </button>

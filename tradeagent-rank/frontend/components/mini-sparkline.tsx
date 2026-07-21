@@ -26,7 +26,7 @@ export default function MiniSparkline({ data, positive = true }: MiniSparklinePr
           <Line
             type="monotone"
             dataKey="v"
-            stroke={positive ? "#00e638" : "#ff4444"}
+            stroke={positive ? "#22C55E" : "#F05252"}
             strokeWidth={1.5}
             dot={false}
             isAnimationActive={false}
